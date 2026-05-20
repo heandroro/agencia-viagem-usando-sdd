@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/heandroro/agencia-viagem/backend/internal/api/handlers"
 	"github.com/heandroro/agencia-viagem/backend/internal/domain/reservation"
 	"github.com/heandroro/agencia-viagem/backend/internal/infra/config"
 	"github.com/heandroro/agencia-viagem/backend/internal/infra/database"
@@ -107,15 +108,14 @@ func main() {
 	log.Println("Server exited")
 }
 
-// Placeholder handlers - serão implementados nas próximas tasks
+// createReservationHandler cria o handler para POST /reservations
 func createReservationHandler(
 	repo reservation.Repository,
 	availRepo reservation.AvailabilityRepository,
 	crypto crypto.Service,
 ) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented yet"})
-	}
+	handler := handlers.NewCreateReservationHandler(repo, availRepo, crypto)
+	return handler.Handle
 }
 
 func updateTravelersHandler(

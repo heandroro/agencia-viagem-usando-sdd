@@ -31,12 +31,12 @@
 5. Configurar TTL de 30 minutos (MongoDB TTL index)
 
 **Checklist de conclusão**:
+- [x] Endpoint implementado no Backend
+- [x] Validação de disponibilidade funcionando (optimistic locking)
+- [x] Cálculo de preço correto
+- [x] Testes unitários (Backend usecase)
 - [ ] Endpoint implementado no BFF
-- [ ] Endpoint implementado no Backend
-- [ ] Validação de disponibilidade funcionando
-- [ ] Cálculo de preço correto
 - [ ] Evento publicado no stream
-- [ ] Testes unitários (BFF + Backend)
 - [ ] Testes de integração
 
 ---
