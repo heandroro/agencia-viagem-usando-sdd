@@ -35,8 +35,9 @@
 - [x] Endpoint implementado no BFF
 - [x] Validação de disponibilidade funcionando (optimistic locking)
 - [x] Cálculo de preço correto
-- [x] Testes unitários (Backend usecase)
-- [ ] Evento publicado no stream (Valkey)
+- [x] Testes unitários (Backend usecase) ✅ PASS
+- [x] Código compila sem erros
+- [ ] Evento publicado no stream (Valkey) - será feito no worker T-05
 - [ ] Testes de integração end-to-end
 
 ---

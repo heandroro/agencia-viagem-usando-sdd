@@ -26,18 +26,21 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Conectar ao MongoDB
-	dbClient, err := database.NewClient(database.Config{
-		URI:      cfg.MongoDB.URI,
-		Database: cfg.MongoDB.Database,
+	// Conectar ao PostgreSQL
+	dbClient, err := database.NewPostgresClient(database.PostgresConfig{
+		Host:     cfg.Postgres.Host,
+		Port:     cfg.Postgres.Port,
+		User:     cfg.Postgres.User,
+		Password: cfg.Postgres.Password,
+		Database: cfg.Postgres.Database,
 		Timeout:  10 * time.Second,
 	})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer dbClient.Close(context.Background())
+	defer dbClient.Close()
 
-	log.Println("Connected to MongoDB")
+	log.Println("Connected to PostgreSQL")
 
 	// Inicializar serviço de criptografia
 	cryptoService, err := crypto.NewAES256Service(cfg.Security.EncryptionKey)
@@ -46,8 +49,8 @@ func main() {
 	}
 
 	// Inicializar repositórios
-	reservationRepo := reservation.NewMongoRepository(dbClient.Database())
-	availabilityRepo := reservation.NewMongoAvailabilityRepository(dbClient.Database())
+	reservationRepo := reservation.NewPostgresRepository(dbClient)
+	availabilityRepo := reservation.NewPostgresAvailabilityRepository(dbClient)
 
 	// Criar router
 	router := gin.New()

@@ -5,20 +5,20 @@ import (
 	"errors"
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"github.com/google/uuid"
+	"github.com/heandroro/agencia-viagem/backend/internal/infra/database"
+	"github.com/jackc/pgx/v5"
 )
 
 // Availability representa a disponibilidade de um pacote em uma data específica
 type Availability struct {
-	ID              bson.ObjectID `bson:"_id,omitempty"`
-	PackageID       string        `bson:"package_id"`
-	Date            time.Time     `bson:"date"`
-	AvailableSlots  int           `bson:"available_slots"`
-	ReservedSlots   int           `bson:"reserved_slots"`
-	Version         int           `bson:"version"` // Para optimistic locking
-	LastUpdated     time.Time     `bson:"last_updated"`
+	ID            uuid.UUID `json:"id"`
+	PackageID     string    `json:"package_id"`
+	Date          time.Time `json:"date"`
+	TotalSlots    int       `json:"total_slots"`
+	ReservedSlots int       `json:"reserved_slots"`
+	Version       int       `json:"version"` // Para optimistic locking
+	LastUpdated   time.Time `json:"last_updated"`
 }
 
 // AvailabilityRepository interface para operações de disponibilidade
@@ -28,140 +28,131 @@ type AvailabilityRepository interface {
 	GetAvailability(ctx context.Context, packageID string, startDate, endDate time.Time) ([]Availability, error)
 }
 
-// MongoAvailabilityRepository implementação MongoDB do repositório
-type MongoAvailabilityRepository struct {
-	collection *mongo.Collection
+// PostgresAvailabilityRepository implementação PostgreSQL do repositório
+type PostgresAvailabilityRepository struct {
+	db *database.PostgresClient
 }
 
-// NewMongoAvailabilityRepository cria um novo repositório
-func NewMongoAvailabilityRepository(db *mongo.Database) *MongoAvailabilityRepository {
-	return &MongoAvailabilityRepository{
-		collection: db.Collection("availability"),
-	}
+// NewPostgresAvailabilityRepository cria um novo repositório PostgreSQL
+func NewPostgresAvailabilityRepository(db *database.PostgresClient) *PostgresAvailabilityRepository {
+	return &PostgresAvailabilityRepository{db: db}
 }
 
 // CheckAndReserve verifica disponibilidade e reserva slots usando optimistic locking
-func (r *MongoAvailabilityRepository) CheckAndReserve(ctx context.Context, packageID string, startDate, endDate time.Time, slots int) error {
+func (r *PostgresAvailabilityRepository) CheckAndReserve(ctx context.Context, packageID string, startDate, endDate time.Time, slots int) error {
 	// Calcular número de dias
 	days := int(endDate.Sub(startDate).Hours() / 24)
-	
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	for i := 0; i < days; i++ {
 		date := startDate.Add(time.Duration(i) * 24 * time.Hour)
-		
-		// Tentativa de reserva com optimistic locking
-		for retries := 0; retries < 3; retries++ {
-			// Buscar registro atual
-			var avail Availability
-			err := r.collection.FindOne(ctx, bson.M{
-				"package_id": packageID,
-				"date":       date,
-			}).Decode(&avail)
-			
-			if err == mongo.ErrNoDocuments {
-				// Criar novo registro de disponibilidade
-				_, err = r.collection.InsertOne(ctx, Availability{
-					PackageID:      packageID,
-					Date:           date,
-					AvailableSlots: 100, // Default
-					ReservedSlots:  slots,
-					Version:        1,
-					LastUpdated:    time.Now(),
-				})
-				if err != nil {
-					return err
-				}
-				break
-			}
-			
+
+		// Verificar disponibilidade com row-level locking
+		var avail Availability
+		err := tx.QueryRow(ctx, `
+			SELECT id, package_id, date, total_slots, reserved_slots, version, last_updated
+			FROM availability
+			WHERE package_id = $1 AND date = $2
+			FOR UPDATE SKIP LOCKED
+		`, packageID, date).Scan(
+			&avail.ID, &avail.PackageID, &avail.Date, &avail.TotalSlots,
+			&avail.ReservedSlots, &avail.Version, &avail.LastUpdated,
+		)
+
+		if err == pgx.ErrNoRows {
+			// Criar novo registro de disponibilidade
+			_, err = tx.Exec(ctx, `
+				INSERT INTO availability (id, package_id, date, total_slots, reserved_slots, version, last_updated)
+				VALUES ($1, $2, $3, 100, $4, 1, $5)
+			`, uuid.New(), packageID, date, slots, time.Now())
 			if err != nil {
 				return err
 			}
-			
-			// Verificar se há slots disponíveis
-			if avail.AvailableSlots-avail.ReservedSlots < slots {
-				return errors.New("package_unavailable")
-			}
-			
-			// Tentar atualizar com optimistic locking
-			result, err := r.collection.UpdateOne(ctx, bson.M{
-				"_id":     avail.ID,
-				"version": avail.Version,
-			}, bson.M{
-				"$inc": bson.M{
-					"reserved_slots": slots,
-					"version":        1,
-				},
-				"$set": bson.M{
-					"last_updated": time.Now(),
-				},
-			})
-			
-			if err != nil {
-				return err
-			}
-			
-			if result.ModifiedCount > 0 {
-				break // Sucesso
-			}
-			
-			// Conflito de versão, tentar novamente
-			if retries == 2 {
-				return errors.New("concurrency_conflict")
-			}
-			
-			time.Sleep(time.Millisecond * 10)
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+
+		// Verificar se há slots disponíveis
+		if avail.TotalSlots-avail.ReservedSlots < slots {
+			return errors.New("package_unavailable")
+		}
+
+		// Atualizar com optimistic locking
+		result, err := tx.Exec(ctx, `
+			UPDATE availability
+			SET reserved_slots = reserved_slots + $1, version = version + 1, last_updated = $2
+			WHERE id = $3 AND version = $4
+		`, slots, time.Now(), avail.ID, avail.Version)
+
+		if err != nil {
+			return err
+		}
+
+		if result.RowsAffected() == 0 {
+			return errors.New("concurrency_conflict")
 		}
 	}
-	
-	return nil
+
+	return tx.Commit(ctx)
 }
 
 // ReleaseSlots libera slots de disponibilidade
-func (r *MongoAvailabilityRepository) ReleaseSlots(ctx context.Context, packageID string, startDate, endDate time.Time, slots int) error {
+func (r *PostgresAvailabilityRepository) ReleaseSlots(ctx context.Context, packageID string, startDate, endDate time.Time, slots int) error {
 	days := int(endDate.Sub(startDate).Hours() / 24)
-	
+
 	for i := 0; i < days; i++ {
 		date := startDate.Add(time.Duration(i) * 24 * time.Hour)
-		
-		_, err := r.collection.UpdateOne(ctx, bson.M{
-			"package_id": packageID,
-			"date":       date,
-		}, bson.M{
-			"$inc": bson.M{
-				"reserved_slots": -slots,
-				"version":        1,
-			},
-			"$set": bson.M{
-				"last_updated": time.Now(),
-			},
-		}, options.Update().SetUpsert(true))
-		
+
+		_, err := r.db.Pool().Exec(ctx, `
+			INSERT INTO availability (id, package_id, date, total_slots, reserved_slots, version, last_updated)
+			VALUES ($1, $2, $3, 100, -$4, 1, $5)
+			ON CONFLICT (package_id, date) DO UPDATE
+			SET reserved_slots = availability.reserved_slots - $4,
+				version = availability.version + 1,
+				last_updated = $5
+		`, uuid.New(), packageID, date, slots, time.Now())
+
 		if err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
 // GetAvailability retorna disponibilidade para um período
-func (r *MongoAvailabilityRepository) GetAvailability(ctx context.Context, packageID string, startDate, endDate time.Time) ([]Availability, error) {
-	cursor, err := r.collection.Find(ctx, bson.M{
-		"package_id": packageID,
-		"date": bson.M{
-			"$gte": startDate,
-			"$lt":  endDate,
-		},
-	})
+func (r *PostgresAvailabilityRepository) GetAvailability(ctx context.Context, packageID string, startDate, endDate time.Time) ([]Availability, error) {
+	rows, err := r.db.Pool().Query(ctx, `
+		SELECT id, package_id, date, total_slots, reserved_slots, version, last_updated
+		FROM availability
+		WHERE package_id = $1 AND date >= $2 AND date < $3
+		ORDER BY date
+	`, packageID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
-	
+	defer rows.Close()
+
 	var results []Availability
-	if err := cursor.All(ctx, &results); err != nil {
-		return nil, err
+	for rows.Next() {
+		var avail Availability
+		err = rows.Scan(
+			&avail.ID, &avail.PackageID, &avail.Date, &avail.TotalSlots,
+			&avail.ReservedSlots, &avail.Version, &avail.LastUpdated,
+		)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, avail)
 	}
-	
-	return results, nil
+
+	return results, rows.Err()
 }

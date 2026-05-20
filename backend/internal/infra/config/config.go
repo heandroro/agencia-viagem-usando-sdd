@@ -9,7 +9,7 @@ import (
 // Config configuração da aplicação
 type Config struct {
 	Server   ServerConfig
-	MongoDB  MongoDBConfig
+	Postgres PostgresConfig
 	Valkey   ValkeyConfig
 	Security SecurityConfig
 	APM      APMConfig
@@ -22,10 +22,14 @@ type ServerConfig struct {
 	WriteTimeout time.Duration
 }
 
-// MongoDBConfig configuração do MongoDB
-type MongoDBConfig struct {
-	URI      string
+// PostgresConfig configuração do PostgreSQL
+type PostgresConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
 	Database string
+	SSLMode  string
 }
 
 // ValkeyConfig configuração do Valkey
@@ -43,10 +47,10 @@ type SecurityConfig struct {
 
 // APMConfig configuração de observabilidade
 type APMConfig struct {
-	Enabled      bool
-	ServiceName  string
+	Enabled        bool
+	ServiceName    string
 	ServiceVersion string
-	Environment  string
+	Environment    string
 }
 
 // Load carrega configuração das variáveis de ambiente
@@ -57,9 +61,13 @@ func Load() *Config {
 			ReadTimeout:  getDuration("SERVER_READ_TIMEOUT", 5*time.Second),
 			WriteTimeout: getDuration("SERVER_WRITE_TIMEOUT", 10*time.Second),
 		},
-		MongoDB: MongoDBConfig{
-			URI:      getEnv("MONGODB_URI", "mongodb://localhost:27017"),
-			Database: getEnv("MONGODB_DATABASE", "agencia_viagem"),
+		Postgres: PostgresConfig{
+			Host:     getEnv("POSTGRES_HOST", "localhost"),
+			Port:     getEnv("POSTGRES_PORT", "5432"),
+			User:     getEnv("POSTGRES_USER", "postgres"),
+			Password: getEnv("POSTGRES_PASSWORD", "postgres"),
+			Database: getEnv("POSTGRES_DATABASE", "agencia_viagem"),
+			SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"),
 		},
 		Valkey: ValkeyConfig{
 			Addr:     getEnv("VALKEY_ADDR", "localhost:6379"),

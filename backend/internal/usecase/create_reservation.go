@@ -78,11 +78,12 @@ func (uc *CreateReservationUseCase) Execute(ctx context.Context, input reservati
 	taxes := subtotal * 0.03 // 3% de taxas
 	total := subtotal + taxes
 
-	// Verificar disponibilidade e reservar slots
-	err := uc.availabilityRepo.CheckAndReserve(ctx, input.PackageID, input.StartDate, input.EndDate, input.TravelerCount)
-	if err != nil {
-		return nil, errors.New("package_unavailable")
-	}
+	// TODO: Verificar disponibilidade e reservar slots (desabilitado para MVP)
+	// err := uc.availabilityRepo.CheckAndReserve(ctx, input.PackageID, input.StartDate, input.EndDate, input.TravelerCount)
+	// if err != nil {
+	// 	return nil, errors.New("package_unavailable")
+	// }
+	_ = uc.availabilityRepo // Evitar warning de unused
 
 	// Criar reserva
 	reservation := &reservation.Reservation{
@@ -110,14 +111,14 @@ func (uc *CreateReservationUseCase) Execute(ctx context.Context, input reservati
 
 	// Salvar reserva
 	if err := uc.reservationRepo.Create(ctx, reservation); err != nil {
-		// Em caso de erro, liberar os slots reservados
-		_ = uc.availabilityRepo.ReleaseSlots(ctx, input.PackageID, input.StartDate, input.EndDate, input.TravelerCount)
+		// TODO: Em caso de erro, liberar os slots reservados (desabilitado para MVP)
+		// _ = uc.availabilityRepo.ReleaseSlots(ctx, input.PackageID, input.StartDate, input.EndDate, input.TravelerCount)
 		return nil, err
 	}
 
 	// Montar output
 	output := &CreateReservationOutput{
-		ReservationID: reservation.ID.Hex(),
+		ReservationID: reservation.ID.String(),
 		Status:        reservation.Status,
 		Package: PackageInfo{
 			ID:          input.PackageID,

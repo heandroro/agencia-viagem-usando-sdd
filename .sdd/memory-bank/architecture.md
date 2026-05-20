@@ -12,7 +12,7 @@
 | Frontend | React + TypeScript | Componentização, tipagem forte, ecossistema maduro |
 | BFF | Python (FastAPI) | Produtividade, async nativo, excelente para orquestração |
 | Backend Core | Go (Gin/Echo) | Performance, concorrência, confiabilidade em transações |
-| Database | MongoDB | Flexibilidade de schema, bom para catálogo e documentos |
+| Database | PostgreSQL | Transações ACID, consistência forte, JSONB para flexibilidade |
 | Cache | Valkey | Compatibilidade Redis, performance, persistência opcional |
 | Message Queue | Valkey Streams | Eventos assíncronos sem adicionar nova dependência |
 
@@ -36,14 +36,15 @@
 - Cache hit/miss para catálogo e buscas
 - Eventos de confirmação de reserva via Streams
 
-### ADR-003: MongoDB como Database Principal
+### ADR-003: PostgreSQL como Database Principal
 **Status**: Aceito
-**Contexto**: Dados de agência de viagem são documentais e flexíveis
-**Decisão**: MongoDB para catálogo, reservas, usuários e pagamentos
+**Contexto**: Necessidade de transações ACID fortes para reservas e consistência de dados
+**Decisão**: PostgreSQL para catálogo, reservas, usuários e pagamentos
 **Consequências**:
-- Schema flexível para evolução de produto
-- Consultas geoespaciais para busca por destino
-- Transações ACID disponíveis para reservas (MongoDB 4.0+)
+- Transações ACID robustas para reservas (evita overbooking)
+- Consistência forte e integridade referencial
+- JSONB disponível para campos flexíveis quando necessário
+- Melhor suporte a locking e concorrência
 
 ## Diagrama de Componentes (C4 - Nível 2)
 

@@ -3,17 +3,17 @@ package reservation
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"github.com/google/uuid"
 )
 
 // Status representa o status de uma reserva
 type Status string
 
 const (
-	StatusPending    Status = "pending"
-	StatusConfirmed  Status = "confirmed"
-	StatusCancelled  Status = "cancelled"
-	StatusExpired    Status = "expired"
+	StatusPending   Status = "pending"
+	StatusConfirmed Status = "confirmed"
+	StatusCancelled Status = "cancelled"
+	StatusExpired   Status = "expired"
 )
 
 // TravelerType indica se é viajante principal ou acompanhante
@@ -34,18 +34,18 @@ const (
 
 // Reservation representa uma reserva de pacote de viagem
 type Reservation struct {
-	ID               bson.ObjectID `bson:"_id,omitempty" json:"reservation_id"`
-	UserID           string        `bson:"user_id" json:"user_id"`
-	PackageID        string        `bson:"package_id" json:"package_id"`
-	Status           Status        `bson:"status" json:"status"`
-	CreatedAt        time.Time     `bson:"created_at" json:"created_at"`
-	UpdatedAt        time.Time     `bson:"updated_at" json:"updated_at"`
-	ExpiresAt        time.Time     `bson:"expires_at" json:"expires_at"`
-	Dates            DateRange     `bson:"dates" json:"dates"`
-	Pricing          Pricing       `bson:"pricing" json:"pricing"`
-	Travelers        []Traveler    `bson:"travelers" json:"travelers"`
-	PoliciesAccepted bool          `bson:"policies_accepted" json:"policies_accepted"`
-	Audit            AuditInfo     `bson:"audit" json:"audit"`
+	ID               uuid.UUID  `json:"reservation_id"`
+	UserID           string     `json:"user_id"`
+	PackageID        string     `json:"package_id"`
+	Status           Status     `json:"status"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	ExpiresAt        time.Time  `json:"expires_at"`
+	Dates            DateRange  `json:"dates"`
+	Pricing          Pricing    `json:"pricing"`
+	Travelers        []Traveler `json:"travelers"`
+	PoliciesAccepted bool       `json:"policies_accepted"`
+	Audit            AuditInfo  `json:"audit"`
 }
 
 // DateRange representa as datas da viagem
@@ -71,7 +71,7 @@ type Traveler struct {
 	FullName          string       `bson:"full_name" json:"full_name"`
 	DocumentType      DocumentType `bson:"document_type" json:"document_type"`
 	DocumentEncrypted string       `bson:"document_encrypted" json:"-"` // Nunca exposto na API
-	DocumentHash      string       `bson:"document_hash" json:"-"`    // Para correlacionar em logs
+	DocumentHash      string       `bson:"document_hash" json:"-"`      // Para correlacionar em logs
 	BirthDate         time.Time    `bson:"birth_date" json:"birth_date"`
 }
 
@@ -94,7 +94,7 @@ type CreateReservationInput struct {
 
 // UpdateTravelersInput dados para atualizar viajantes
 type UpdateTravelersInput struct {
-	ReservationID string         `json:"-" validate:"required"`
+	ReservationID string          `json:"-" validate:"required"`
 	Travelers     []TravelerInput `json:"travelers" validate:"required,min=1,max=10,dive"`
 }
 
@@ -109,14 +109,14 @@ type TravelerInput struct {
 
 // ReservationSummary resumo da reserva para o usuário
 type ReservationSummary struct {
-	ReservationID string           `json:"reservation_id"`
-	Status        Status           `json:"status"`
-	Package       PackageInfo      `json:"package"`
-	Dates         DateRange        `json:"dates"`
+	ReservationID string            `json:"reservation_id"`
+	Status        Status            `json:"status"`
+	Package       PackageInfo       `json:"package"`
+	Dates         DateRange         `json:"dates"`
 	Travelers     []TravelerSummary `json:"travelers"`
-	Pricing       Pricing          `json:"pricing"`
-	Policies      Policies         `json:"policies"`
-	ExpiresAt     time.Time        `json:"expires_at"`
+	Pricing       Pricing           `json:"pricing"`
+	Policies      Policies          `json:"policies"`
+	ExpiresAt     time.Time         `json:"expires_at"`
 }
 
 // PackageInfo informações do pacote no resumo

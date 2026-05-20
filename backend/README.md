@@ -14,7 +14,7 @@ backend/
 │   │       ├── repository.go   # Persistência
 │   │       └── availability.go # Disponibilidade
 │   ├── infra/
-│   │   ├── database/    # MongoDB
+│   │   ├── database/    # PostgreSQL
 │   │   └── config/      # Configurações
 │   └── api/
 │       └── handlers/    # HTTP handlers
@@ -27,7 +27,7 @@ backend/
 
 - **Go 1.23**
 - **Gin** - Web framework
-- **MongoDB** - Database
+- **PostgreSQL** - Database (transações ACID)
 - **Valkey** - Cache e streams
 - **AES-256-GCM** - Criptografia de dados sensíveis
 
@@ -49,8 +49,12 @@ make test-backend
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `SERVER_PORT` | Porta do servidor | `8080` |
-| `MONGODB_URI` | URI do MongoDB | `mongodb://localhost:27017` |
-| `MONGODB_DATABASE` | Nome do database | `agencia_viagem` |
+| `POSTGRES_HOST` | Host do PostgreSQL | `localhost` |
+| `POSTGRES_PORT` | Porta do PostgreSQL | `5432` |
+| `POSTGRES_USER` | Usuário do PostgreSQL | `postgres` |
+| `POSTGRES_PASSWORD` | Senha do PostgreSQL | `postgres` |
+| `POSTGRES_DATABASE` | Nome do database | `agencia_viagem` |
+| `POSTGRES_SSLMODE` | Modo SSL | `disable` |
 | `VALKEY_ADDR` | Endereço do Valkey | `localhost:6379` |
 | `ENCRYPTION_KEY` | Chave AES-256 (mínimo 32 chars) | - |
 | `JWT_SECRET` | Secret para JWT | - |

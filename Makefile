@@ -3,11 +3,11 @@
 help: ## Mostra esta ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Inicializa infraestrutura (MongoDB, Valkey)
-	docker-compose up -d mongodb valkey
+setup: ## Inicializa infraestrutura (PostgreSQL, Valkey)
+	docker-compose up -d postgres valkey
 	@echo "Aguardando serviços iniciarem..."
 	@sleep 5
-	@echo "MongoDB e Valkey prontos!"
+	@echo "PostgreSQL e Valkey prontos!"
 
 start: ## Inicia todos os serviços
 	docker-compose up -d
@@ -66,8 +66,8 @@ format-frontend: ## Formata código do frontend
 	cd frontend && npm run format
 
 # Database
-db-shell: ## Abre shell do MongoDB
-	docker-compose exec mongodb mongosh -u admin -p admin123 --authenticationDatabase admin agencia_viagem
+db-shell: ## Abre shell do PostgreSQL
+	docker-compose exec postgres psql -U postgres -d agencia_viagem
 
 valkey-cli: ## Abre CLI do Valkey
 	docker-compose exec valkey valkey-cli
