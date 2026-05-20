@@ -220,9 +220,9 @@ func (r *PostgresRepository) UpdateTravelers(ctx context.Context, id string, tra
 	// Inserir novos viajantes
 	for _, t := range travelers {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO travelers (id, reservation_id, type, full_name, document_type, document_number_encrypted, document_hash, birth_date)
+			INSERT INTO travelers (id, reservation_id, "type", full_name, document_type, document_number_encrypted, document_hash, birth_date)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		`, uuid.New(), reservationID, t.Type, t.FullName, t.DocumentType, t.DocumentEncrypted, t.DocumentHash, t.BirthDate)
+		`, uuid.New(), reservationID, string(t.Type), t.FullName, string(t.DocumentType), t.DocumentEncrypted, t.DocumentHash, t.BirthDate)
 		if err != nil {
 			return err
 		}
