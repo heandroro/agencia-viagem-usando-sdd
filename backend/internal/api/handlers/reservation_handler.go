@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -184,6 +185,7 @@ func (h *UpdateTravelersHandler) Handle(c *gin.Context) {
 				"message": "Reserva não está em status pendente",
 			})
 		default:
+			log.Printf("[ERROR] UpdateTravelers: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   "internal_error",
 				"message": "Erro interno ao atualizar viajantes",

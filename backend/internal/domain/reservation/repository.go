@@ -70,7 +70,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id string) (*Reservati
 	sql := `
 		SELECT id, user_id, package_id, status, start_date, end_date, nights,
 			package_price, subtotal, taxes, total, currency, expires_at,
-			ip_address, user_agent, created_at, updated_at
+			CAST(ip_address AS TEXT), user_agent, created_at, updated_at
 		FROM reservations WHERE id = $1
 	`
 
@@ -116,7 +116,7 @@ func (r *PostgresRepository) GetByUserID(ctx context.Context, userID string, sta
 	sql := `
 		SELECT id, user_id, package_id, status, start_date, end_date, nights,
 			package_price, subtotal, taxes, total, currency, expires_at,
-			ip_address, user_agent, created_at, updated_at
+			CAST(ip_address AS TEXT), user_agent, created_at, updated_at
 		FROM reservations WHERE user_id = $1
 	`
 	args := []interface{}{userID}

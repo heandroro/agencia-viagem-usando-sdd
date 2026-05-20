@@ -1,0 +1,10 @@
+name: bff
+version: 1.0.0
+description: APM project for bff
+author: Leandro Yamaniha
+dependencies:
+  apm:
+  - heandroro/sdd-framework#sdd-to-harness
+  mcp: []
+includes: auto
+scripts: {}
