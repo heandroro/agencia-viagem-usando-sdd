@@ -1,0 +1,53 @@
+lockfile_version: '1'
+generated_at: '2026-05-20T03:38:57.814969+00:00'
+apm_version: 0.12.2
+dependencies:
+- repo_url: heandroro/sdd-framework
+  host: github.com
+  resolved_commit: 5ff96029acae2f5a403340b2c604963cb90f8d8b
+  resolved_ref: sdd-with-apm
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/sdd-memory-bank
+  - .agents/skills/sdd-stack
+  - .agents/skills/sdd-workflow
+  - .github/agents/sdd.agent.md
+  - .github/instructions/sdd-constitution.instructions.md
+  - .github/instructions/sdd-design.instructions.md
+  - .github/instructions/sdd-memory-bank.instructions.md
+  - .github/instructions/sdd-requirements.instructions.md
+  - .github/prompts/atualizar-apm-standards.prompt.md
+  - .github/prompts/atualizar-produto.prompt.md
+  - .github/prompts/criar-spec.prompt.md
+  - .github/prompts/gerar-tasks.prompt.md
+  - .github/prompts/init-memory-bank.prompt.md
+  - .github/prompts/promover-adr.prompt.md
+  - .github/prompts/referenciar-doc.prompt.md
+  - .github/prompts/referenciar-repo.prompt.md
+  - .github/prompts/revisar-spec.prompt.md
+  deployed_file_hashes:
+    .github/agents/sdd.agent.md: sha256:51b4f1c10e62a4980edd4d6be4c76f6fdb3059e9ff056f8d9a74a6bb065ef4fb
+    .github/instructions/sdd-constitution.instructions.md: sha256:4561fa1dffabccb58888acea3d7047cb485cc0019a8592f41f5ec13095112c7b
+    .github/instructions/sdd-design.instructions.md: sha256:1004a5ef66225ffb237d8d5545160505fb7c6a7182a50dcd5bf8bffd431d02a6
+    .github/instructions/sdd-memory-bank.instructions.md: sha256:82284daf64f6fe5d86590c942c0b2affda5e79c4ee92c62e056f5e83c0d6cd35
+    .github/instructions/sdd-requirements.instructions.md: sha256:81e345c05306cb02bd34cba515d673b29018baee61e56e574fc53f113b7e69b4
+    .github/prompts/atualizar-apm-standards.prompt.md: sha256:6425302571d0e9b5d65a22d424cee98425d2a5a292fc0cab6aeb226850ed2834
+    .github/prompts/atualizar-produto.prompt.md: sha256:7a0e11e5eb439c3518a797c2167346b6a8ed29bad4d303869422ae861afd526f
+    .github/prompts/criar-spec.prompt.md: sha256:a2b8562bc52efb0006476f2b7ebbf0698970f4fe878f30467162c6fcfb4f0862
+    .github/prompts/gerar-tasks.prompt.md: sha256:986b5af3aa5ea9775726dfcb31ca7a06379e26160d173da79a5698ae62fc56a3
+    .github/prompts/init-memory-bank.prompt.md: sha256:a23cc1bd3ed1d09f532d985ee96412c40366d5c362fc7ec0ae48553364760226
+    .github/prompts/promover-adr.prompt.md: sha256:32ae2bb485f35b8d3936317cfee97f68be8e17146a78daa0e4777204133f903a
+    .github/prompts/referenciar-doc.prompt.md: sha256:c2a84f87374047a3f30c6f4a20f68eb005e53aaf41fc883132061fa21f49c2e6
+    .github/prompts/referenciar-repo.prompt.md: sha256:b5d82d8cb6a153f400eb51147adc4e9264b71899f150f6bd90303662cf087d1e
+    .github/prompts/revisar-spec.prompt.md: sha256:7ca3dc94b2fd001000a5e40af5a16895a48db67a6a5ec803f8a1a86f6a717215
+  content_hash: sha256:89e9db87c68aaa58166ea2dcfb067b5ba37efcc83dfb94785d38f72f9f4184ab
+mcp_servers:
+- io.github.github/github-mcp-server
+mcp_configs:
+  io.github.github/github-mcp-server:
+    name: io.github.github/github-mcp-server
+    env:
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+    tools:
+    - get_file_contents
+    - search_code

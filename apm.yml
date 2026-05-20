@@ -1,0 +1,10 @@
+name: agencia-viagem
+version: 1.0.0
+description: APM project for agencia-viagem
+author: Leandro Yamaniha
+dependencies:
+  apm:
+  - heandroro/sdd-framework#sdd-with-apm
+  mcp: []
+includes: auto
+scripts: {}
