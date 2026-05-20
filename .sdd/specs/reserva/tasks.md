@@ -32,12 +32,12 @@
 
 **Checklist de conclusão**:
 - [x] Endpoint implementado no Backend
+- [x] Endpoint implementado no BFF
 - [x] Validação de disponibilidade funcionando (optimistic locking)
 - [x] Cálculo de preço correto
 - [x] Testes unitários (Backend usecase)
-- [ ] Endpoint implementado no BFF
-- [ ] Evento publicado no stream
-- [ ] Testes de integração
+- [ ] Evento publicado no stream (Valkey)
+- [ ] Testes de integração end-to-end
 
 ---
 
