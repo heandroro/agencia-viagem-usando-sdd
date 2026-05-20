@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O fluxo de reserva é implementado em 3 camadas: Frontend React gerencia o wizard de reserva, BFF Python (FastAPI) orquestra chamadas e validações, Backend Go (Gin) executa regras de negócio e persistência no MongoDB. Reservas pendentes usam TTL de 30 minutos via worker assíncrono consumindo de Valkey Streams.
+O fluxo de reserva é implementado em 3 camadas: Frontend React gerencia o wizard de reserva, BFF Python (FastAPI) orquestra chamadas e validações, Backend Go (Gin) executa regras de negócio e persistência no PostgreSQL. Reservas pendentes expiram após 30 minutos via worker assíncrono consumindo de Valkey Streams.
 
 ## Interface/API
 
@@ -207,9 +207,9 @@ O fluxo de reserva é implementado em 3 camadas: Frontend React gerencia o wizar
 
 ## Modelo de Dados
 
-### Collection: reservations
+### Tabela: reservations
 ```
-- _id: ObjectId (reservation_id)
+- id: UUID (reservation_id)
 - user_id: String (hashed user id)
 - package_id: String (referência ao pacote)
 - status: Enum [pending, confirmed, cancelled, expired]
@@ -221,10 +221,10 @@ O fluxo de reserva é implementado em 3 camadas: Frontend React gerencia o wizar
   - end_date: Date
   - nights: Number
 - pricing: Object
-  - package_price: Decimal128
-  - subtotal: Decimal128
-  - taxes: Decimal128
-  - total: Decimal128
+  - package_price: DECIMAL(10,2)
+  - subtotal: DECIMAL(10,2)
+  - taxes: DECIMAL(10,2)
+  - total: DECIMAL(10,2)
   - currency: String
 - travelers: Array
   - traveler_id: String
@@ -237,23 +237,22 @@ O fluxo de reserva é implementado em 3 camadas: Frontend React gerencia o wizar
 - audit: Object
   - ip_address: String
   - user_agent: String
-- indexes:
-  - { user_id: 1, status: 1 }
-  - { expires_at: 1 }, expireAfterSeconds: 0
-  - { package_id: 1, dates.start_date: 1, dates.end_date: 1 }
+- índices:
+  - (user_id, status)
+  - (expires_at) WHERE status = 'pending'
+  - (package_id, start_date, end_date)
 ```
 
-### Collection: availability (Materialized View)
+### Tabela: availability
 ```
-- _id: ObjectId
+- id: UUID
 - package_id: String
 - date: Date
 - available_slots: Number
 - reserved_slots: Number
 - version: Number (para optimistic locking)
-- indexes:
-  - { package_id: 1, date: 1 }
-  - { available_slots: 1 }
+- índices:
+  - UNIQUE(package_id, date)
 ```
 
 ## Diagrama de Sequência
@@ -261,7 +260,7 @@ O fluxo de reserva é implementado em 3 camadas: Frontend React gerencia o wizar
 ### Fluxo: Criar Reserva (REQ-1.1)
 
 ```
-Frontend    BFF(Python)    Backend(Go)    MongoDB    Valkey
+Frontend    BFF(Python)    Backend(Go)    PostgreSQL    Valkey
    │              │              │            │          │
    │ POST /res    │              │            │          │
    │─────────────>│              │            │          │
@@ -279,9 +278,9 @@ Frontend    BFF(Python)    Backend(Go)    MongoDB    Valkey
    │              │              │    Disp.   │          │
    │              │              │───────────>│          │
    │              │              │ 5. Lock    │          │
-   │              │              │    Atomic  │          │
+   │              │              │    FOR UPDATE  │          │
    │              │              │<──────────│          │
-   │              │              │ 6. Insert  │          │
+   │              │              │ 6. INSERT  │          │
    │              │              │    Reserva │─────────>│
    │              │              │<──────────│          │
    │              │              │ 7. Pub     │          │
@@ -327,7 +326,7 @@ Worker(Go)    Valkey    MongoDB
 | APM-M4 | business.reservation.summary_viewed | Counter | - | Visualização de resumo |
 | APM-M5 | business.reservation.expired | Counter | reason | Reservas expiradas |
 | APM-M6 | reservation.api.duration | Histogram | endpoint, method | Latência da API |
-| APM-M7 | reservation.db.duration | Histogram | operation | Latência MongoDB |
+| APM-M7 | reservation.db.duration | Histogram | operation | Latência PostgreSQL |
 | APM-M8 | reservation.cache.hit | Counter | cache_name | Cache hit |
 | APM-M9 | reservation.cache.miss | Counter | cache_name | Cache miss |
 
@@ -357,17 +356,17 @@ Worker(Go)    Valkey    MongoDB
 
 ## Decisões de Design
 
-### DD-001: TTL de Reserva via MongoDB vs Worker Manual
+### DD-001: Expiração de Reserva via Worker Manual
 **Alternativas consideradas**:
-- Opção A: MongoDB TTL Index (automático, simples, mas sem lógica custom)
+- Opção A: PostgreSQL native temporal tables + trigger
 - Opção B: Worker manual com Valkey Streams (mais controle, notificações)
 
-**Decisão**: Usar ambos - TTL Index como fallback + Worker para eventos
-**Justificativa**: TTL Index garante cleanup mesmo se worker falhar; Worker publica eventos para notificações e métricas de negócio
+**Decisão**: Worker manual com Valkey Streams
+**Justificativa**: Maior controle sobre lógica de expiração; Worker publica eventos para notificações e métricas de negócio; Índice parcial em PostgreSQL otimiza busca de reservas pendentes
 
 ### DD-002: Criptografia de Documentos
 **Alternativas consideradas**:
-- Opção A: MongoDB Client-Side Field Level Encryption (CSFLE)
+- Opção A: PostgreSQL pgcrypto extension
 - Opção B: Criptografia manual AES-256 no Backend
 
 **Decisão**: Criptografia AES-256 manual + hashing para logs
@@ -375,11 +374,11 @@ Worker(Go)    Valkey    MongoDB
 
 ### DD-003: Controle de Disponibilidade
 **Alternativas consideradas**:
-- Opção A: Pessimistic Lock (bloqueia leitura, mais seguro)
+- Opção A: Pessimistic Lock (FOR UPDATE - bloqueia linha, mais seguro)
 - Opção B: Optimistic Locking (version field, melhor performance)
 
-**Decisão**: Optimistic Locking na collection availability
-**Justificativa**: Melhor performance para leituras concorrentes; retry em caso de conflito
+**Decisão**: Optimistic Locking na tabela availability com PostgreSQL row-level locking
+**Justificativa**: `FOR UPDATE SKIP LOCKED` para concorrência; retry em caso de conflito de versão
 
 ### DD-004: Estrutura de Preços
 **Alternativas consideradas**:
@@ -392,7 +391,7 @@ Worker(Go)    Valkey    MongoDB
 ## Alinhamento com Architecture
 
 - [x] Consistente com ADR-001 (BFF orquestra, Backend Core executa)
-- [x] Usa dependências listadas em architecture.md (MongoDB, Valkey)
+- [x] Usa dependências listadas em architecture.md (PostgreSQL, Valkey)
 - [x] Não introduz novas dependências externas
 - [x] Segue padrões de código definidos (Repository pattern Go, FastAPI Python)
 

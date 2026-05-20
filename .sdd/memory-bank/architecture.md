@@ -72,10 +72,10 @@
 └─────────┼────────────────┼───────────────────┼─────────────┘
           │                │                   │
           ▼                ▼                   ▼
-     ┌─────────┐      ┌─────────┐       ┌─────────────┐
-     │ MongoDB │      │ MongoDB │       │   Stripe    │
-     │(Pacotes)│      │(Reservas)│      │    API      │
-     └─────────┘      └─────────┘       └─────────────┘
+     ┌──────────┐     ┌──────────┐      ┌─────────────┐
+     │PostgreSQL│     │PostgreSQL│      │   Stripe    │
+     │ (Catálogo)│     │(Reservas)│      │    API      │
+     └──────────┘     └──────────┘      └─────────────┘
           │                │
           └────────────────┘
                     │
@@ -92,7 +92,7 @@
 |-------------|-----|------------|
 | Stripe | Processamento de pagamentos | API REST |
 | Valkey | Cache e message queue | Redis protocol |
-| MongoDB Atlas (ou self-hosted) | Persistência | MongoDB driver |
+| PostgreSQL (self-hosted ou RDS) | Persistência | pgx driver |
 
 ## Padrões de Código
 
