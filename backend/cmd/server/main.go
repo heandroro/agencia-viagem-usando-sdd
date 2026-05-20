@@ -132,7 +132,6 @@ func updateTravelersHandler(
 func getReservationSummaryHandler(
 	repo reservation.Repository,
 ) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented yet"})
-	}
+	handler := handlers.NewGetReservationSummaryHandler(repo)
+	return handler.Handle
 }

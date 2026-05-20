@@ -250,3 +250,62 @@ type TravelerResponse struct {
 	DocumentNumber string `json:"document_number"` // Mascarado
 	BirthDate      string `json:"birth_date"`
 }
+
+// GetReservationSummaryHandler handler para buscar resumo da reserva
+type GetReservationSummaryHandler struct {
+	getSummaryUC *usecase.GetReservationSummaryUseCase
+}
+
+// NewGetReservationSummaryHandler cria um novo handler
+func NewGetReservationSummaryHandler(repo reservation.Repository) *GetReservationSummaryHandler {
+	return &GetReservationSummaryHandler{
+		getSummaryUC: usecase.NewGetReservationSummaryUseCase(repo),
+	}
+}
+
+// Handle processa a requisição de busca do resumo
+func (h *GetReservationSummaryHandler) Handle(c *gin.Context) {
+	reservationID := c.Param("id")
+	if reservationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "ID da reserva é obrigatório",
+		})
+		return
+	}
+
+	userID := c.GetString("user_id")
+	if userID == "" {
+		userID = "anonymous" // TODO: Remover quando auth estiver implementado
+	}
+
+	input := usecase.GetReservationSummaryInput{
+		ReservationID: reservationID,
+		UserID:        userID,
+	}
+
+	output, err := h.getSummaryUC.Execute(c.Request.Context(), input)
+	if err != nil {
+		switch err.Error() {
+		case "reservation_not_found":
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "reservation_not_found",
+				"message": "Reserva não encontrada",
+			})
+		case "unauthorized":
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":   "unauthorized",
+				"message": "Não autorizado a acessar esta reserva",
+			})
+		default:
+			log.Printf("[ERROR] GetReservationSummary: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "internal_error",
+				"message": "Erro interno ao buscar resumo",
+			})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, output)
+}
